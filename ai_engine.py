@@ -97,7 +97,6 @@ def classify_and_tag(text, filename=""):
         case_tag = case_match.group(0)
     else:
         # Generate clean standard tag
-        import hash_id
         import random
         num = random.randint(1000, 9999)
         case_tag = f"{case_prefix}-2026-{num}"

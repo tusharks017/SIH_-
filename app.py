@@ -29,13 +29,21 @@ def log_audit(action, user_id, document_id=None, details=None):
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'securelex-super-secret-key-prod-2026')
 
+is_serverless = bool(
+    os.environ.get('VERCEL') or 
+    os.environ.get('VERCEL_ENV') or 
+    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or 
+    os.environ.get('NOW_REGION') or 
+    not os.access(app.root_path, os.W_OK)
+)
+
 # Database URI (Use Vercel Postgres/Supabase URL or fallback to SQLite in /tmp for serverless)
 db_uri = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI')
 if db_uri and db_uri.startswith("postgres://"):
     db_uri = db_uri.replace("postgres://", "postgresql://", 1)
 
 if not db_uri:
-    if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or os.environ.get('VERCEL_ENV'):
+    if is_serverless:
         tmp_db = '/tmp/sdms.db'
         try:
             os.makedirs('/tmp', exist_ok=True)
@@ -64,10 +72,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 
 # Upload folder (Use /tmp/uploads on Vercel serverless or local folder)
 upload_dir = os.environ.get('UPLOAD_FOLDER') or (
-    '/tmp/uploads' if os.environ.get('VERCEL') else os.path.join(app.root_path, 'uploads')
+    '/tmp/uploads' if is_serverless else os.path.join(app.root_path, 'uploads')
 )
 app.config['UPLOAD_FOLDER'] = upload_dir
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+try:
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+except Exception as e:
+    print("Upload dir note:", e)
 
 db.init_app(app)
 login_manager = LoginManager()
