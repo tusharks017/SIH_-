@@ -31,13 +31,16 @@ if db_uri and db_uri.startswith("postgres://"):
     db_uri = db_uri.replace("postgres://", "postgresql://", 1)
 
 if not db_uri:
-    if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+    if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or os.environ.get('VERCEL_ENV'):
+        try:
+            os.makedirs('/tmp', exist_ok=True)
+        except Exception:
+            pass
         tmp_db = '/tmp/sdms.db'
         orig_db = os.path.join(app.root_path, 'instance', 'sdms.db')
         if not os.path.exists(tmp_db) and os.path.exists(orig_db):
             import shutil
             try:
-                os.makedirs('/tmp', exist_ok=True)
                 shutil.copyfile(orig_db, tmp_db)
             except Exception as e:
                 print("Error copying seed db to /tmp:", e)
