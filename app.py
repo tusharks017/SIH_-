@@ -18,9 +18,13 @@ from security_engine import (
 )
 
 def log_audit(action, user_id, document_id=None, details=None):
-    log = AuditLog(action=action, user_id=user_id, document_id=document_id, details=details)
-    db.session.add(log)
-    db.session.commit()
+    try:
+        log = AuditLog(action=action, user_id=user_id, document_id=document_id, details=details)
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print("Audit log note:", e)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'securelex-super-secret-key-prod-2026')
@@ -75,13 +79,14 @@ def check_ip_whitelist():
     if request.path.startswith('/static') or request.path == '/logout':
         return
     try:
+        db.create_all()
         setting = SecuritySetting.query.first()
         if setting and setting.ip_whitelist_enabled:
             client_ip = request.remote_addr or '127.0.0.1'
             if not is_ip_allowed(client_ip, setting.allowed_ips):
                 return "<h1 style='color:#9b2226;text-align:center;margin-top:100px;'>403 SECURITY ACCESS BLOCKED</h1><p style='text-align:center;'>Your IP address (" + client_ip + ") is not whitelisted to access SECURELEX.</p>", 403
     except Exception:
-        pass
+        db.session.rollback()
 
 @app.route('/set_lang/<lang>')
 def set_lang(lang):
@@ -102,11 +107,16 @@ def page_not_found(e):
 
 @app.errorhandler(500)
 def internal_server_error(e):
+    db.session.rollback()
     return render_template('500.html'), 500
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        return User.query.get(int(user_id))
+    except Exception:
+        db.session.rollback()
+        return None
 
 from datetime import datetime, timezone
 
