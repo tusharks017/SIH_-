@@ -23,9 +23,19 @@ def log_audit(action, user_id, document_id=None, details=None):
     db.session.commit()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'super-secret-key-for-sdms'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sdms.db'
-app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'securelex-super-secret-key-prod-2026')
+
+# Database URI (Use Vercel Postgres/Supabase URL or fallback to SQLite in /tmp for serverless)
+db_uri = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI')
+if db_uri and db_uri.startswith("postgres://"):
+    db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = db_uri or 'sqlite:///' + os.path.join(app.root_path, 'instance', 'sdms.db')
+
+# Upload folder (Use /tmp/uploads on Vercel serverless or local folder)
+upload_dir = os.environ.get('UPLOAD_FOLDER') or (
+    '/tmp/uploads' if os.environ.get('VERCEL') else os.path.join(app.root_path, 'uploads')
+)
+app.config['UPLOAD_FOLDER'] = upload_dir
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(app)

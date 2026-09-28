@@ -14,10 +14,16 @@ from reportlab.lib.units import inch
 # 1. AES-256 ENCRYPTION AT REST
 # ═════════════════════════════════════════════════════════════════
 KEY_FILE = os.path.join(os.path.dirname(__file__), 'secret.key')
-if not os.path.exists(KEY_FILE):
+env_key = os.environ.get('ENCRYPTION_KEY')
+if env_key:
+    raw_key = base64.b64decode(env_key.encode('utf-8'))
+elif not os.path.exists(KEY_FILE):
     raw_key = os.urandom(32)
-    with open(KEY_FILE, 'wb') as f:
-        f.write(base64.b64encode(raw_key))
+    try:
+        with open(KEY_FILE, 'wb') as f:
+            f.write(base64.b64encode(raw_key))
+    except Exception:
+        pass
 else:
     with open(KEY_FILE, 'rb') as f:
         raw_key = base64.b64decode(f.read())
