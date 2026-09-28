@@ -33,14 +33,6 @@
                         <div class="invalid-feedback">Password is required.</div>
                     </div>
 
-                    <div class="form-floating mb-5">
-                        <select class="form-select border-light shadow-none bg-light" id="role" name="role" required>
-                            <option value="viewer">{{ _('Viewer (Can view documents)') }}</option>
-                            <option value="admin">{{ _('Admin (Can upload and delete)') }}</option>
-                        </select>
-                        <label for="role" class="text-muted">{{ _('Select Role') }}</label>
-                    </div>
-
                     <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow">
                         <i class="bi bi-person-plus-fill"></i> {{ _('Register') }}
                     </button>

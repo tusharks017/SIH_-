@@ -27,6 +27,10 @@ if os.path.exists(db_path):
         print("Adding signature_hash to document table...")
         cursor.execute("ALTER TABLE document ADD COLUMN signature_hash VARCHAR(100);")
 
+    if 'file_data' not in doc_cols:
+        print("Adding file_data to document table...")
+        cursor.execute("ALTER TABLE document ADD COLUMN file_data BLOB;")
+
     # 2. Update User table
     cursor.execute("PRAGMA table_info(user)")
     user_cols = [info[1] for info in cursor.fetchall()]

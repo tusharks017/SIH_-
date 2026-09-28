@@ -163,7 +163,7 @@ def index():
         docs_query = docs_query.filter((Document.expiry_date == None) | (Document.expiry_date > now))
         
         if current_user.role != 'admin':
-            docs_query = docs_query.filter_by(access_level='viewer')
+            docs_query = docs_query.filter(Document.uploader_id == current_user.id)
         
         if query:
             docs_query = docs_query.filter(
@@ -219,7 +219,7 @@ def register():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        role = request.form.get('role', 'viewer')
+        role = 'viewer'
         
         if not username or not password:
             flash('Username and password are required', 'danger')
@@ -300,12 +300,16 @@ def upload():
             
             # Encrypt file at rest using AES-256
             encrypted_data = encrypt_bytes(raw_bytes)
-            with open(file_path, 'wb') as f:
-                f.write(encrypted_data)
+            try:
+                with open(file_path, 'wb') as f:
+                    f.write(encrypted_data)
+            except Exception:
+                pass
             
             new_doc = Document(
                 original_filename=original_filename,
                 saved_filename=saved_filename,
+                file_data=encrypted_data,
                 case_tag=case_tag,
                 category_tag=category_tag,
                 access_level=access_level,
@@ -322,7 +326,6 @@ def upload():
                 old_versions = Document.query.filter_by(parent_id=parent_doc.id).all()
                 for old in old_versions:
                     old.parent_id = new_doc.id
-                parent_doc.parent_id = new_doc.id
                 db.session.commit()
                 log_audit('UPLOAD_VERSION', current_user.id, new_doc.id, f"Uploaded version {new_version} (AES-256 Encrypted)")
             else:
@@ -337,22 +340,33 @@ def upload():
 @login_required
 def download(doc_id):
     doc = Document.query.get_or_404(doc_id)
-    if current_user.role != 'admin' and doc.access_level == 'admin-only':
+    if current_user.role != 'admin' and doc.uploader_id != current_user.id:
         flash('You do not have permission to view this document', 'danger')
         return redirect(url_for('index'))
-        
+
     preview = request.args.get('preview') == '1'
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc.saved_filename)
     
     log_audit('PREVIEW' if preview else 'DOWNLOAD', current_user.id, doc.id, f"{'Previewed' if preview else 'Downloaded'} document")
     
-    # Read encrypted file and decrypt in-memory
-    if not os.path.exists(file_path):
-        flash('File storage error: File not found on disk.', 'danger')
+    # Read encrypted file and decrypt in-memory (with database BLOB fallback)
+    encrypted_bytes = None
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as f:
+            encrypted_bytes = f.read()
+    elif doc.file_data:
+        encrypted_bytes = doc.file_data
+        try:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'wb') as f:
+                f.write(encrypted_bytes)
+        except Exception:
+            pass
+
+    if not encrypted_bytes:
+        flash('File storage error: File content not found on server.', 'danger')
         return redirect(url_for('index'))
-        
-    with open(file_path, 'rb') as f:
-        encrypted_bytes = f.read()
+
     raw_bytes = decrypt_bytes(encrypted_bytes)
     
     # Dynamic Watermarking & Digital Signature Stamping for PDFs
@@ -397,11 +411,11 @@ def download(doc_id):
 @app.route('/delete/<int:doc_id>', methods=['POST'])
 @login_required
 def delete(doc_id):
-    if current_user.role != 'admin':
-        flash('Only admins can delete documents', 'danger')
+    doc = Document.query.get_or_404(doc_id)
+    if current_user.role != 'admin' and doc.uploader_id != current_user.id:
+        flash('You do not have permission to delete this document', 'danger')
         return redirect(url_for('index'))
         
-    doc = Document.query.get_or_404(doc_id)
     doc.is_deleted = True
     doc.deleted_at = datetime.utcnow()
     
@@ -501,7 +515,7 @@ def delete_tag(tag_id):
 @login_required
 def history(doc_id):
     doc = Document.query.get_or_404(doc_id)
-    if current_user.role != 'admin' and doc.access_level == 'admin-only':
+    if current_user.role != 'admin' and doc.uploader_id != current_user.id:
         flash('You do not have permission', 'danger')
         return redirect(url_for('index'))
     versions = Document.query.filter_by(parent_id=doc.id).order_by(Document.version.desc()).all()
@@ -511,7 +525,7 @@ def history(doc_id):
 @login_required
 def summarize(doc_id):
     doc = Document.query.get_or_404(doc_id)
-    if current_user.role != 'admin' and doc.access_level == 'admin-only':
+    if current_user.role != 'admin' and doc.uploader_id != current_user.id:
         flash('You do not have permission', 'danger')
         return redirect(url_for('index'))
         
@@ -530,7 +544,7 @@ def summarize(doc_id):
 @login_required
 def redact(doc_id):
     doc = Document.query.get_or_404(doc_id)
-    if current_user.role != 'admin' and doc.access_level == 'admin-only':
+    if current_user.role != 'admin' and doc.uploader_id != current_user.id:
         flash('You do not have permission', 'danger')
         return redirect(url_for('index'))
         
@@ -572,7 +586,7 @@ def redact(doc_id):
 @login_required
 def sign(doc_id):
     doc = Document.query.get_or_404(doc_id)
-    if current_user.role != 'admin' and doc.access_level == 'admin-only':
+    if current_user.role != 'admin' and doc.uploader_id != current_user.id:
         flash('You do not have permission to sign this document', 'danger')
         return redirect(url_for('index'))
         

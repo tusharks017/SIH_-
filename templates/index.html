@@ -142,7 +142,7 @@
                     {% endif %}
                     <a href="{{ url_for('download', doc_id=doc.id) }}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" title="Download document" aria-label="Download"><i class="bi bi-download me-1"></i> {{ _('Download') }}</a>
                     <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#summaryModal{{ doc.id }}" title="AI Summary"><i class="bi bi-stars"></i></button>
-                    {% if current_user.role == 'admin' %}
+                    {% if current_user.role == 'admin' or doc.uploader_id == current_user.id %}
                     <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#deleteModal{{ doc.id }}" title="Delete Document"><i class="bi bi-trash"></i></button>
                     {% endif %}
                 </div>
@@ -164,7 +164,7 @@
                             </form>
                         </li>
                         {% endif %}
-                        {% if current_user.role == 'admin' %}
+                        {% if current_user.role == 'admin' or doc.uploader_id == current_user.id %}
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ doc.id }}">
@@ -218,7 +218,7 @@
   </div>
 </div>
 
-{% if current_user.role == 'admin' %}
+{% if current_user.role == 'admin' or doc.uploader_id == current_user.id %}
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal{{ doc.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ doc.id }}" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
