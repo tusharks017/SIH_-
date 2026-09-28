@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}AI PII Redaction Tool - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="Interactively redact PII, confidential terms, and sensitive data from legal documents.">{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
+        <div class="card shadow border-0" style="border-radius: 15px;">
+            <div class="card-header bg-dark text-white pt-4 pb-3" style="border-radius: 15px 15px 0 0;">
+                <h4 class="mb-0 fw-bold"><i class="bi bi-scissors me-2 text-warning"></i> AI Redaction Workspace: <span class="text-warning">{{ doc.original_filename }}</span></h4>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                
+                <div class="row g-4">
+                    <!-- Left Column: Redaction Controls -->
+                    <div class="col-12 col-md-5">
+                        <div class="bg-light p-4 rounded-3 border">
+                            <h5 class="fw-bold mb-3"><i class="bi bi-sliders me-2 text-primary"></i> Redaction Rules</h5>
+                            
+                            <form method="POST" id="redact-form">
+                                <div class="form-check form-switch mb-4">
+                                    <input class="form-check-input" type="checkbox" name="auto_pii" value="1" id="auto_pii" checked>
+                                    <label class="form-check-label fw-bold" for="auto_pii">
+                                        Auto-Redact All PII
+                                    </label>
+                                    <div class="form-text small">Detects and blacks out SSNs, Credit Cards, Emails, Phone Numbers, and IP addresses automatically.</div>
+                                </div>
+
+                                {% if detected_pii %}
+                                <div class="mb-4 p-3 bg-warning bg-opacity-10 border border-warning rounded-3">
+                                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> PII Detected in File:</h6>
+                                    <ul class="list-unstyled mb-0 small">
+                                        {% for pii_type, items in detected_pii.items() %}
+                                        <li><strong>{{ pii_type }}:</strong> {{ items|length }} match(es)</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
+                                <div class="mb-4">
+                                    <label for="terms" class="form-label fw-bold"><i class="bi bi-input-cursor-text me-1 text-primary"></i> Custom Terms to Redact</label>
+                                    <textarea class="form-control border" id="terms" name="terms" rows="4" placeholder="Enter words or names to redact (one per line)&#10;e.g. John Doe&#10;Confidential Project X"></textarea>
+                                </div>
+
+                                <button type="submit" class="btn btn-danger btn-lg w-100 rounded-pill shadow">
+                                    <i class="bi bi-scissors me-2"></i> Generate Redacted Copy
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Document Preview & Extracted Text -->
+                    <div class="col-12 col-md-7">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-text me-2 text-primary"></i> Document Content Preview</h5>
+                        <div class="p-3 bg-light rounded-3 border" style="max-height: 420px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">
+                            {% if doc.extracted_text %}
+                                {{ doc.extracted_text }}
+                            {% else %}
+                                <span class="text-muted italic">No extracted text content available for this document.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ _('SECURELEX - Secure Document Management') }}{% endblock %}</title>
+
+    {% block meta_description %}
+    <meta name="description" content="SECURELEX is an enterprise-grade secure digital document management system for legal, investigative, and confidential records.">
+    {% endblock %}
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+    <link rel="shortcut icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+
+    <!-- Bootswatch -->
+    <link id="theme-stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/zephyr/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        /* ═══════════════════════════════════════
+           PALETTE & LAYOUT PREVENT OVERFLOW
+        ═══════════════════════════════════════ */
+        :root {
+            --sdms-navy:   #1b2a4a;
+            --sdms-blue:   #2d4a7a;
+            --sdms-gold:   #c9a84c;
+            --sdms-ivory:  #f5f3ee;
+            --sdms-white:  #ffffff;
+            --sdms-gray:   #6c757d;
+            --sdms-border: #e4e0d8;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            max-width: 100vw;
+        }
+
+        /* ═══════════════════════════════════════
+           PAGE LOADER
+        ═══════════════════════════════════════ */
+        #page-loader {
+            position: fixed; inset: 0; z-index: 9999;
+            background: var(--sdms-ivory);
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.4s ease;
+        }
+        #page-loader.fade-out { opacity: 0; pointer-events: none; }
+        .loader-ring {
+            width: 52px; height: 52px;
+            border: 4px solid var(--sdms-border);
+            border-top-color: var(--sdms-gold);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ═══════════════════════════════════════
+           SCROLL PROGRESS BAR
+        ═══════════════════════════════════════ */
+        #scroll-progress {
+            position: fixed; top: 0; left: 0; z-index: 9998;
+            height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--sdms-gold), var(--sdms-blue));
+            transition: width 0.1s linear;
+        }
+
+        /* ═══════════════════════════════════════
+           BODY
+        ═══════════════════════════════════════ */
+        body {
+            background-color: var(--sdms-ivory);
+            color: var(--sdms-navy);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            opacity: 0; transition: opacity 0.3s ease;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+        }
+        body.loaded { opacity: 1; }
+
+        /* ═══════════════════════════════════════
+           SKIP TO CONTENT (Accessibility)
+        ═══════════════════════════════════════ */
+        #skip-to-content {
+            position: absolute; top: -60px; left: 16px; z-index: 10000;
+            background: var(--sdms-gold); color: var(--sdms-navy);
+            padding: 8px 16px; border-radius: 0 0 6px 6px;
+            font-weight: 700; text-decoration: none;
+            transition: top 0.2s;
+        }
+        #skip-to-content:focus { top: 0; }
+
+        /* ═══════════════════════════════════════
+           NAVBAR (Sticky Header)
+        ═══════════════════════════════════════ */
+        .navbar {
+            background-color: var(--sdms-navy) !important;
+            border-bottom: 3px solid var(--sdms-gold) !important;
+            box-shadow: 0 2px 8px rgba(27,42,74,0.18) !important;
+            position: sticky; top: 0; z-index: 1030;
+            min-height: 68px !important;
+            padding-top: 0.65rem !important;
+            padding-bottom: 0.65rem !important;
+        }
+        .navbar .navbar-brand, .navbar span.nav-link { color: #f0ead6 !important; font-size: 1.15rem; }
+        .navbar .nav-link { color: #f0ead6 !important; transition: color 0.2s ease; position: relative; font-size: 0.95rem; }
+        .navbar .nav-link:hover { color: var(--sdms-gold) !important; }
+        .navbar .nav-link::after {
+            content: ''; position: absolute; bottom: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 0; height: 2px; background: var(--sdms-gold);
+            transition: width 0.25s ease;
+        }
+        .navbar .nav-link:hover::after { width: 70%; }
+
+        /* ── Site Search ── */
+        #navbar-search-form .form-control {
+            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+            color: #f0ead6; border-radius: 20px; width: 180px;
+            transition: width 0.3s ease, background 0.2s;
+        }
+        #navbar-search-form .form-control::placeholder { color: rgba(240,234,214,0.6); }
+        #navbar-search-form .form-control:focus {
+            width: 240px; background: rgba(255,255,255,0.22);
+            box-shadow: 0 0 0 2px rgba(201,168,76,0.4); color: #fff;
+        }
+        #navbar-search-form .btn { color: var(--sdms-gold); }
+
+        /* ═══════════════════════════════════════
+           BUTTONS — Hover States & Responsiveness
+        ═══════════════════════════════════════ */
+        .btn { transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease; }
+        .btn:hover  { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
+        .btn:active { transform: translateY(0); box-shadow: none; }
+
+        .btn-primary { background-color: var(--sdms-blue); border-color: var(--sdms-blue); color: #fff; }
+        .btn-primary:hover, .btn-primary:focus { background-color: var(--sdms-navy); border-color: var(--sdms-navy); color: #fff; }
+        .btn-outline-primary { color: var(--sdms-blue); border-color: var(--sdms-blue); }
+        .btn-outline-primary:hover { background-color: var(--sdms-blue); color: #fff; }
+        .btn-outline-secondary { color: var(--sdms-gray); border-color: #ced4da; }
+        .btn-info, .btn-info:hover { background-color: var(--sdms-gold); border-color: var(--sdms-gold); color: var(--sdms-navy); }
+
+        /* ═══════════════════════════════════════
+           UTILITY OVERRIDES
+        ═══════════════════════════════════════ */
+        .bg-primary  { background-color: var(--sdms-blue)  !important; }
+        .bg-info     { background-color: var(--sdms-gold)  !important; color: var(--sdms-navy) !important; }
+        .bg-success  { background-color: #2d6a4f !important; color: #fff !important; }
+        .bg-danger   { background-color: #9b2226 !important; color: #fff !important; }
+        .bg-dark     { background-color: var(--sdms-navy)  !important; }
+        .text-primary { color: var(--sdms-blue) !important; }
+        .text-info    { color: var(--sdms-gold) !important; }
+
+        /* ═══════════════════════════════════════
+           CARDS & MOBILE WRAPPING
+        ═══════════════════════════════════════ */
+        .card { background-color: var(--sdms-white); border: 1px solid var(--sdms-border); border-radius: 10px !important; max-width: 100%; }
+        .card-header.bg-primary, .card-header.bg-dark {
+            background-color: var(--sdms-navy) !important;
+            border-bottom: 2px solid var(--sdms-gold) !important;
+            color: #f0ead6 !important;
+        }
+        .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(27,42,74,0.12) !important; }
+
+        /* ═══════════════════════════════════════
+           STICKY TABLE HEADER & RESPONSIVENESS
+        ═══════════════════════════════════════ */
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-sticky thead th {
+            position: sticky; top: 0; z-index: 10;
+            background: var(--sdms-navy); color: #f0ead6;
+            border-bottom: 2px solid var(--sdms-gold);
+        }
+
+        /* ═══════════════════════════════════════
+           BADGES
+        ═══════════════════════════════════════ */
+        .badge.bg-success   { background-color: #2d6a4f !important; }
+        .badge.bg-danger    { background-color: #9b2226 !important; }
+        .badge.bg-info      { background-color: var(--sdms-gold) !important; color: var(--sdms-navy) !important; }
+        .badge.bg-secondary { background-color: #5a6474 !important; }
+
+        /* ═══════════════════════════════════════
+           INPUTS — Form Success & Error States
+        ═══════════════════════════════════════ */
+        .form-control:focus, .form-select:focus {
+            border-color: var(--sdms-gold);
+            box-shadow: 0 0 0 0.2rem rgba(201,168,76,0.2);
+        }
+        .form-control { transition: border-color 0.2s, box-shadow 0.2s; max-width: 100%; }
+
+        .form-control.is-valid   { border-color: #2d6a4f !important; background-image: none; }
+        .form-control.is-invalid { border-color: #9b2226 !important; background-image: none; }
+        .valid-feedback   { color: #2d6a4f; font-weight: 600; display: none; }
+        .invalid-feedback { color: #9b2226; font-weight: 600; display: none; }
+        .is-valid ~ .valid-feedback { display: block; }
+        .is-invalid ~ .invalid-feedback { display: block; }
+
+        .form-success-banner {
+            background: #d1e7dd; border: 1px solid #2d6a4f; border-radius: 8px;
+            padding: 12px 16px; margin-bottom: 1rem;
+            color: #155724; display: flex; align-items: center; gap: 8px;
+            animation: slideDown 0.3s ease;
+        }
+        .form-error-banner {
+            background: #f8d7da; border: 1px solid #9b2226; border-radius: 8px;
+            padding: 12px 16px; margin-bottom: 1rem;
+            color: #721c24; display: flex; align-items: center; gap: 8px;
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+        /* ═══════════════════════════════════════
+           PASSWORD VISIBILITY TOGGLE
+        ═══════════════════════════════════════ */
+        .password-wrapper { position: relative; width: 100%; }
+        .password-toggle {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: var(--sdms-gray);
+            cursor: pointer; padding: 4px 8px; z-index: 5;
+            transition: color 0.2s;
+        }
+        .password-toggle:hover { color: var(--sdms-navy); }
+        .password-wrapper .form-control { padding-right: 42px; }
+
+        /* ═══════════════════════════════════════
+           COPY BUTTON
+        ═══════════════════════════════════════ */
+        .copy-btn { transition: color 0.2s ease, transform 0.15s ease; cursor: pointer; }
+        .copy-btn:hover { transform: scale(1.1); }
+        .copy-btn.copied { color: #2d6a4f !important; }
+
+        /* ═══════════════════════════════════════
+           BACK TO TOP
+        ═══════════════════════════════════════ */
+        #back-to-top {
+            position: fixed; bottom: 28px; right: 28px; z-index: 1050;
+            width: 44px; height: 44px;
+            background: var(--sdms-navy); color: var(--sdms-gold);
+            border: 2px solid var(--sdms-gold); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.2s ease;
+            cursor: pointer; text-decoration: none;
+        }
+        #back-to-top.visible { opacity: 1; pointer-events: all; }
+        #back-to-top:hover { transform: translateY(-3px); color: var(--sdms-gold); }
+
+        /* ═══════════════════════════════════════
+           FLOATING HELP BUTTON
+        ═══════════════════════════════════════ */
+        #float-help {
+            position: fixed; bottom: 84px; right: 28px; z-index: 1050;
+            width: 44px; height: 44px;
+            background: var(--sdms-gold); color: var(--sdms-navy);
+            border: none; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 4px 14px rgba(201,168,76,0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #float-help:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 6px 18px rgba(201,168,76,0.5); }
+
+        /* ═══════════════════════════════════════
+           COOKIE BANNER
+        ═══════════════════════════════════════ */
+        #cookie-banner {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1055;
+            background: var(--sdms-navy); color: #f0ead6;
+            padding: 14px 24px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+            border-top: 3px solid var(--sdms-gold);
+            box-shadow: 0 -4px 16px rgba(27,42,74,0.2);
+            transform: translateY(100%); transition: transform 0.4s ease;
+        }
+        #cookie-banner.show { transform: translateY(0); }
+
+        /* ═══════════════════════════════════════
+           FOOTER STYLES
+        ═══════════════════════════════════════ */
+        footer.site-footer {
+            margin-top: auto;
+            background-color: var(--sdms-navy);
+            color: #f0ead6;
+            border-top: 3px solid var(--sdms-gold);
+        }
+        footer.site-footer a {
+            color: #dcd6c5;
+            transition: color 0.2s ease;
+        }
+        footer.site-footer a:hover {
+            color: var(--sdms-gold);
+            text-decoration: underline !important;
+        }
+
+        /* ═══════════════════════════════════════
+           EXPANDABLE FAQ
+        ═══════════════════════════════════════ */
+        .faq-item .accordion-button {
+            background: var(--sdms-ivory); color: var(--sdms-navy); font-weight: 600;
+        }
+        .faq-item .accordion-button:not(.collapsed) {
+            background: var(--sdms-navy); color: #f0ead6;
+            box-shadow: inset 0 -2px 0 var(--sdms-gold);
+        }
+
+        /* ═══════════════════════════════════════
+           DROPDOWNS
+        ═══════════════════════════════════════ */
+        .dropdown-item { transition: background 0.15s ease, color 0.15s ease, padding-left 0.15s ease; }
+        .dropdown-item:hover { background-color: var(--sdms-ivory); color: var(--sdms-navy); padding-left: 1.4rem; }
+
+        /* ═══════════════════════════════════════
+           MOBILE BREAKPOINTS & OVERFLOW FIXES
+        ═══════════════════════════════════════ */
+        @media (max-width: 991px) {
+            .navbar-collapse {
+                background: var(--sdms-navy);
+                padding: 12px 16px;
+                border-top: 1px solid rgba(201,168,76,0.3);
+                border-radius: 0 0 10px 10px;
+            }
+            #navbar-search-form .form-control { width: 100%; }
+        }
+        @media (max-width: 576px) {
+            .container { padding-left: 12px; padding-right: 12px; }
+            #back-to-top, #float-help { right: 16px; }
+            #float-help { bottom: 76px; }
+            #back-to-top { bottom: 20px; }
+        }
+
+        /* ═══════════════════════════════════════
+           DARK MODE
+        ═══════════════════════════════════════ */
+        body.dark-mode { background-color: #0e1826; color: #e8e0cc; }
+        body.dark-mode #page-loader { background: #0e1826; }
+        body.dark-mode #scroll-progress { background: linear-gradient(90deg, var(--sdms-gold), #4a7ab5); }
+        body.dark-mode .navbar { background-color: #0a1020 !important; }
+        body.dark-mode .card { background-color: #162033; color: #e8e0cc; border-color: #243050; }
+        body.dark-mode .card-header.bg-primary, body.dark-mode .card-header.bg-dark { background-color: #0a1020 !important; }
+        body.dark-mode .text-muted, body.dark-mode .text-dark { color: #a89f8a !important; }
+        body.dark-mode .bg-light, body.dark-mode .form-control, body.dark-mode .form-select {
+            background-color: #1f2d45 !important; color: #e8e0cc !important; border-color: #304060 !important;
+        }
+        body.dark-mode .list-group-item { background-color: #162033; color: #e8e0cc; border-color: #243050; }
+        body.dark-mode .table { color: #e8e0cc; }
+        body.dark-mode .table-sticky thead th { background: #0a1020; }
+        body.dark-mode .table-light th { background-color: #1f2d45; color: #e8e0cc; }
+        body.dark-mode #back-to-top { background: #0a1020; }
+        body.dark-mode #cookie-banner { background: #0a1020; }
+        body.dark-mode footer.site-footer { background-color: #0a1020; }
+        body.dark-mode .faq-item .accordion-button { background: #162033; color: #e8e0cc; }
+        body.dark-mode .faq-item .accordion-body { background: #1f2d45; color: #e8e0cc; }
+        body.dark-mode .form-success-banner { background: #1a3a2a; border-color: #2d6a4f; color: #a3d9b1; }
+        body.dark-mode .form-error-banner { background: #3a1a1a; border-color: #9b2226; color: #f0a0a0; }
+
+        /* ═══════════════════════════════════════
+           PRINT STYLESHEET
+        ═══════════════════════════════════════ */
+        @media print {
+            #page-loader, #scroll-progress, .navbar, #cookie-banner,
+            #back-to-top, #float-help, .btn, .dropdown, .toast-container,
+            footer.site-footer, form, .card-footer { display: none !important; }
+            body { background: #fff !important; color: #000 !important; font-size: 12pt; }
+            .card { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
+            .card-header { background: #f0f0f0 !important; color: #000 !important; border-bottom: 1px solid #999 !important; }
+            .badge { border: 1px solid #999 !important; color: #000 !important; background: #eee !important; }
+            h1, h2, h3 { color: #000 !important; }
+            a { color: #000 !important; text-decoration: none; }
+            .container { max-width: 100% !important; }
+            @page { margin: 1.5cm; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Skip to Content ── -->
+<a id="skip-to-content" href="#main-content">Skip to main content</a>
+
+<!-- ── Scroll Progress Bar ── -->
+<div id="scroll-progress"></div>
+
+<!-- ── Page Loader ── -->
+<div id="page-loader"><div class="loader-ring"></div></div>
+
+<!-- ── Navbar (Sticky Header & Clickable Logo) ── -->
+<nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container">
+        <!-- Clickable Logo -->
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="{{ url_for('index') }}" title="SECURELEX Dashboard" aria-label="SECURELEX Home">
+            <img src="{{ url_for('static', filename='logo.jpg') }}"
+                 alt="SECURELEX Logo"
+                 style="height:38px;width:38px;object-fit:cover;border-radius:8px;border:1.5px solid var(--sdms-gold);">
+            <span style="letter-spacing:1px;">SECURELEX</span>
+        </a>
+
+        <!-- Mobile Menu Toggler -->
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- ── Site Search ── -->
+            {% if current_user.is_authenticated %}
+            <form id="navbar-search-form" class="d-flex ms-3 me-auto" action="{{ url_for('index') }}" method="GET" data-no-loader>
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control form-control-sm" placeholder="Search docs…" aria-label="Search">
+                    <button class="btn btn-sm" type="submit" aria-label="Submit Search"><i class="bi bi-search"></i></button>
+                </div>
+            </form>
+            {% else %}
+            <span class="me-auto"></span>
+            {% endif %}
+
+            <!-- Clean Context-Aware Navigation -->
+            <ul class="navbar-nav align-items-center gap-1">
+                <li class="nav-item">
+                    <button id="theme-toggle" class="btn btn-sm btn-outline-light rounded-circle ms-1" title="Toggle Dark Mode" aria-label="Toggle Dark Mode">
+                        <i class="bi bi-moon-fill"></i>
+                    </button>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="langDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-globe2"></i> {{ current_lang.upper() }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="langDropdown">
+                        <li><a class="dropdown-item" href="{{ url_for('set_lang', lang='en') }}">🇬🇧 English</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('set_lang', lang='es') }}">🇪🇸 Español</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('set_lang', lang='fr') }}">🇫🇷 Français</a></li>
+                    </ul>
+                </li>
+
+                {% if current_user.is_authenticated %}
+                <li class="nav-item">
+                    <button type="button" class="btn nav-link text-white d-flex align-items-center gap-1 border-0 bg-transparent px-2"
+                            data-bs-toggle="offcanvas" data-bs-target="#userProfileOffcanvas" aria-controls="userProfileOffcanvas"
+                            title="View User Profile">
+                        <i class="bi bi-person-circle fs-5 text-warning"></i>
+                        <span>{{ current_user.username }}</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('upload') }}"><i class="bi bi-cloud-arrow-up-fill"></i> {{ _('Upload') }}</a>
+                </li>
+                {% if current_user.role == 'admin' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('tags') }}"><i class="bi bi-tags-fill me-1"></i> Tags</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('security_settings') }}"><i class="bi bi-shield-lock-fill me-1"></i> IP Security</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('audit') }}"><i class="bi bi-list-check me-1"></i> Audit Log</a>
+                </li>
+                {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('settings_2fa') }}"><i class="bi bi-qr-code me-1"></i> 2FA</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('trash') }}"><i class="bi bi-trash3-fill me-1"></i> Recycle Bin</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> {{ _('Logout') }}</a>
+                </li>
+                {% else %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">{{ _('Login') }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">{{ _('Register') }}</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Toast Notifications (Success & Error Messages) ── -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1080;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="toast align-items-center text-bg-{{ category if category != 'error' else 'danger' }} border-0 show shadow-lg"
+                 role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body fw-bold">
+                        {% if category in ['success'] %}
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                        {% elif category in ['danger', 'error'] %}
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        {% else %}
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+
+<!-- ── Main Content ── -->
+<main id="main-content" class="container pb-5">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- ── Footer with Working Links, Clickable Email & Phone ── -->
+<footer class="site-footer py-4 mt-auto">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <h5 class="fw-bold text-white mb-2">
+                    <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Logo" style="height:24px;width:24px;border-radius:4px;" class="me-2">
+                    SECURELEX
+                </h5>
+                <p class="small text-light opacity-75 mb-2">
+                    Secure Digital Document Management System for legal and investigation files. Enterprise security, role-based access, and dynamic watermarking.
+                </p>
+                <div class="small">
+                    <!-- Clickable Phone and Email -->
+                    <div><a href="tel:+18005550199" class="text-decoration-none"><i class="bi bi-telephone-fill me-1 text-warning"></i> +1 (800) 555-0199</a></div>
+                    <div><a href="mailto:support@securelex.com" class="text-decoration-none"><i class="bi bi-envelope-fill me-1 text-warning"></i> support@securelex.com</a></div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="fw-bold text-warning text-uppercase mb-3">Quick Links</h6>
+                <ul class="list-unstyled small mb-0">
+                    <li class="mb-1"><a href="{{ url_for('index') }}" class="text-decoration-none"><i class="bi bi-chevron-right small me-1"></i> Dashboard</a></li>
+                    {% if current_user.is_authenticated %}
+                    <li class="mb-1"><a href="{{ url_for('upload') }}" class="text-decoration-none"><i class="bi bi-chevron-right small me-1"></i> Upload Document</a></li>
+                    {% if current_user.role == 'admin' %}
+                    <li class="mb-1"><a href="{{ url_for('audit') }}" class="text-decoration-none"><i class="bi bi-chevron-right small me-1"></i> Audit Logs</a></li>
+                    {% endif %}
+                    {% else %}
+                    <li class="mb-1"><a href="{{ url_for('login') }}" class="text-decoration-none"><i class="bi bi-chevron-right small me-1"></i> Login</a></li>
+                    <li class="mb-1"><a href="{{ url_for('register') }}" class="text-decoration-none"><i class="bi bi-chevron-right small me-1"></i> Register</a></li>
+                    {% endif %}
+                    <li class="mb-1"><a href="#" data-bs-toggle="modal" data-bs-target="#helpModal" class="text-decoration-none"><i class="bi bi-chevron-right small me-1"></i> Help & FAQ</a></li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h6 class="fw-bold text-warning text-uppercase mb-3">Legal & Security</h6>
+                <ul class="list-unstyled small mb-3">
+                    <li class="mb-1"><a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal" class="text-decoration-none"><i class="bi bi-shield-lock me-1"></i> Privacy Policy</a></li>
+                    <li class="mb-1"><a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" class="text-decoration-none"><i class="bi bi-file-text me-1"></i> Terms of Service</a></li>
+                    <li class="mb-1"><a href="#" data-bs-toggle="modal" data-bs-target="#securityModal" class="text-decoration-none"><i class="bi bi-lock me-1"></i> Security Standards</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <hr class="my-3 opacity-25">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center small text-light opacity-75">
+            <!-- Dynamic Copyright Year -->
+            <div>&copy; {{ current_year }} SECURELEX. All rights reserved.</div>
+            <div>Built for Legal & Investigation Workflow Security.</div>
+        </div>
+    </div>
+</footer>
+
+<!-- ── Back to Top ── -->
+<a id="back-to-top" href="#" title="Back to top" aria-label="Back to top">
+    <i class="bi bi-chevron-up"></i>
+</a>
+
+<!-- ── Floating Help/Contact Button ── -->
+<button id="float-help" data-bs-toggle="modal" data-bs-target="#helpModal" title="Help & FAQ" aria-label="Open Help">
+    <i class="bi bi-question-lg"></i>
+</button>
+
+{% if current_user.is_authenticated %}
+<!-- ── User Profile Offcanvas Sidebar ── -->
+<div class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" id="userProfileOffcanvas" aria-labelledby="userProfileOffcanvasLabel" style="width: 380px;">
+  <div class="offcanvas-header text-white p-4" style="background-color: var(--sdms-navy) !important; border-bottom: 3px solid var(--sdms-gold) !important;">
+    <div class="d-flex align-items-center gap-3">
+        <div class="p-3 bg-warning bg-opacity-20 rounded-circle text-warning border border-warning">
+            <i class="bi bi-person-fill fs-2"></i>
+        </div>
+        <div>
+            <h5 class="offcanvas-title fw-bold text-white mb-0" id="userProfileOffcanvasLabel">{{ current_user.username }}</h5>
+            <span class="badge bg-warning text-dark mt-1 text-uppercase fw-bold" style="background-color:var(--sdms-gold)!important;color:var(--sdms-navy)!important;">
+                <i class="bi {% if current_user.role == 'admin' %}bi-shield-check{% else %}bi-person{% endif %} me-1"></i> {{ current_user.role.upper() }}
+            </span>
+        </div>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  
+  <div class="offcanvas-body p-4 d-flex flex-column">
+    <!-- User Account Information -->
+    <div class="card border-0 bg-light p-3 mb-4 rounded-3">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-card-heading text-primary me-2"></i> Account Profile</h6>
+        
+        <div class="mb-3">
+            <small class="text-muted d-block">User Email Address</small>
+            <a href="mailto:{{ current_user.username }}@securelex.com" class="fw-bold text-decoration-none text-primary">
+                <i class="bi bi-envelope-fill text-warning me-1"></i> {{ current_user.username }}@securelex.com
+            </a>
+        </div>
+        
+        <div class="mb-3">
+            <small class="text-muted d-block">Access Level & Authority</small>
+            <span class="fw-semibold text-dark"><i class="bi bi-shield-lock text-primary me-1"></i> {{ current_user.role.title() }} Rights</span>
+        </div>
+        
+        <div>
+            <small class="text-muted d-block mb-1">2FA Security Status</small>
+            {% if current_user.is_2fa_enabled %}
+                <span class="badge bg-success p-2 px-3"><i class="bi bi-check-circle-fill me-1"></i> 2FA Active</span>
+            {% else %}
+                <span class="badge bg-warning text-dark p-2 px-3"><i class="bi bi-exclamation-triangle-fill me-1"></i> 2FA Not Setup</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Management Shortcuts -->
+    <h6 class="fw-bold text-muted text-uppercase small mb-2">Security & Quick Links</h6>
+    <div class="list-group list-group-flush mb-4 rounded-3 border">
+        <a href="{{ url_for('settings_2fa') }}" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-3">
+            <div><i class="bi bi-qr-code text-primary me-2"></i> Two-Factor Authentication</div>
+            <i class="bi bi-chevron-right text-muted small"></i>
+        </a>
+        {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('tags') }}" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-3">
+            <div><i class="bi bi-tags-fill text-info me-2"></i> Custom Tag Manager</div>
+            <i class="bi bi-chevron-right text-muted small"></i>
+        </a>
+        <a href="{{ url_for('security_settings') }}" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-3">
+            <div><i class="bi bi-shield-lock-fill text-warning me-2"></i> IP Whitelisting</div>
+            <i class="bi bi-chevron-right text-muted small"></i>
+        </a>
+        <a href="{{ url_for('audit') }}" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-3">
+            <div><i class="bi bi-list-check text-success me-2"></i> System Audit Trail</div>
+            <i class="bi bi-chevron-right text-muted small"></i>
+        </a>
+        {% endif %}
+        <a href="{{ url_for('trash') }}" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-3">
+            <div><i class="bi bi-trash3-fill text-danger me-2"></i> Recycle Bin</div>
+            <i class="bi bi-chevron-right text-muted small"></i>
+        </a>
+    </div>
+
+    <!-- Logout Action -->
+    <div class="mt-auto pt-3">
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-lg w-100 rounded-pill shadow-sm">
+            <i class="bi bi-box-arrow-right me-2"></i> Logout
+        </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Help / FAQ Modal ── -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white border-0" style="background-color:var(--sdms-navy)!important;border-bottom:2px solid var(--sdms-gold)!important;">
+        <h5 class="modal-title fw-bold" id="helpModalLabel"><i class="bi bi-patch-question-fill me-2"></i> Help & FAQ</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-4">Quick answers to common questions about SECURELEX.</p>
+        <div class="accordion" id="faqAccordion">
+          {% set faqs = [
+            ("How do I upload a document?", "Click the Upload link in the navigation bar. Fill in the case tag, category tag, access level, and optionally an expiry date, then submit."),
+            ("What is the difference between Admin and Viewer?", "Admins can upload, delete, manage versions, and view the audit log. Viewers can browse and download documents marked as Viewer-accessible."),
+            ("How does document versioning work?", "Click the ⋮ menu on any document card and choose 'Upload New Version'. The new file becomes the primary version. Old versions are archived and available via 'View History'."),
+            ("What happens when a document expires?", "Documents with a past expiry date are automatically hidden from the dashboard. They remain in the database and can still be accessed by admins."),
+            ("Are my PDFs watermarked?", "Yes. Every PDF download or preview is dynamically stamped with your username and the current date to deter unauthorized sharing."),
+            ("How do I search for documents?", "Use the search bar in the navigation or the search box on the dashboard. You can filter by case tag or category tag."),
+            ("Can I change the language?", "Yes. Click the globe icon in the navbar to switch between English, Español, and Français.")
+          ] %}
+          {% for q, a in faqs %}
+          <div class="accordion-item faq-item border-0 mb-2">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed rounded-3" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ loop.index }}">
+                <i class="bi bi-chevron-right me-2 small"></i> {{ q }}
+              </button>
+            </h2>
+            <div id="faq{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body text-muted">{{ a }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <small class="text-muted me-auto"><i class="bi bi-envelope me-1"></i> Contact: <a href="mailto:support@securelex.com">support@securelex.com</a></small>
+        <button type="button" class="btn btn-primary rounded-pill" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Privacy Policy Modal ── -->
+<div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-dark text-white border-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-shield-lock me-2"></i> Privacy Policy</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 small text-muted">
+        <h6>Data Collection & Use</h6>
+        <p>SECURELEX collects only essential data required for authentication and audit trail tracking, including username, upload timestamps, and access logs.</p>
+        <h6>Data Storage</h6>
+        <p>All legal documents are securely stored with role-based access control. Documents marked as admin-only are restricted exclusively to authorized administrators.</p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary btn-sm rounded-pill" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Terms of Service Modal ── -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-dark text-white border-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-file-text me-2"></i> Terms of Service</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 small text-muted">
+        <h6>Usage Terms</h6>
+        <p>SECURELEX is intended strictly for authorized legal and investigative document management. Users must maintain confidentiality of their credentials.</p>
+        <h6>Dynamic Watermarking</h6>
+        <p>All downloaded documents contain automated watermarks containing the user's identity to enforce chain-of-custody tracking.</p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary btn-sm rounded-pill" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Security Standards Modal ── -->
+<div class="modal fade" id="securityModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-dark text-white border-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-lock me-2"></i> Security Standards</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 small text-muted">
+        <h6>Audit Trails</h6>
+        <p>Every download, preview, upload, and deletion action is immutably recorded in system audit logs.</p>
+        <h6>Password Hashing</h6>
+        <p>User credentials are encrypted using industry-standard scrypt cryptographic hashing algorithms.</p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary btn-sm rounded-pill" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Cookie Banner ── -->
+<div id="cookie-banner" role="complementary" aria-label="Cookie notice">
+    <span><i class="bi bi-shield-check me-2 text-warning"></i>
+        This site uses only essential session cookies required for secure login. No tracking cookies are used.
+    </span>
+    <div class="d-flex gap-2 flex-shrink-0">
+        <button id="cookie-accept" class="btn btn-sm fw-bold" style="background:var(--sdms-gold);color:var(--sdms-navy);">
+            <i class="bi bi-check-lg"></i> Got it
+        </button>
+    </div>
+</div>
+
+<!-- ── Bootstrap JS ── -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // ── Page Loader ──
+    const loader = document.getElementById('page-loader');
+    document.body.classList.add('loaded');
+    setTimeout(() => { if (loader) { loader.classList.add('fade-out'); setTimeout(() => loader.remove(), 400); } }, 200);
+
+    // ── Toasts ──
+    document.querySelectorAll('.toast').forEach(el => new bootstrap.Toast(el, { delay: 5000 }).show());
+
+    // ── Scroll Progress Bar ──
+    const progressBar = document.getElementById('scroll-progress');
+    window.addEventListener('scroll', () => {
+        const scrolled = window.scrollY;
+        const total = document.documentElement.scrollHeight - window.innerHeight;
+        if (progressBar) progressBar.style.width = total > 0 ? (scrolled / total * 100) + '%' : '0%';
+    }, { passive: true });
+
+    // ── Dark Mode Toggle ──
+    const themeBtn   = document.getElementById('theme-toggle');
+    const stylesheet = document.getElementById('theme-stylesheet');
+    const icon       = themeBtn ? themeBtn.querySelector('i') : null;
+    function applyDark(isDark) {
+        document.body.classList.toggle('dark-mode', isDark);
+        document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+        if (icon) icon.className = isDark ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-fill';
+    }
+    applyDark(localStorage.getItem('darkMode') === 'true');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const next = !document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', next);
+            applyDark(next);
+        });
+    }
+
+    // ── Back to Top ──
+    const btt = document.getElementById('back-to-top');
+    if (btt) {
+        window.addEventListener('scroll', () => btt.classList.toggle('visible', window.scrollY > 300), { passive: true });
+        btt.addEventListener('click', e => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    }
+
+    // ── Cookie Banner ──
+    const banner = document.getElementById('cookie-banner');
+    const cookieAcceptBtn = document.getElementById('cookie-accept');
+    if (banner && !localStorage.getItem('cookieAccepted')) setTimeout(() => banner.classList.add('show'), 900);
+    if (cookieAcceptBtn) {
+        cookieAcceptBtn.addEventListener('click', () => {
+            if (banner) banner.classList.remove('show');
+            localStorage.setItem('cookieAccepted', 'true');
+        });
+    }
+
+    // ── Password Visibility Toggle ──
+    document.querySelectorAll('.password-wrapper').forEach(wrapper => {
+        const input = wrapper.querySelector('input[type="password"], input[type="text"]');
+        const btn   = wrapper.querySelector('.password-toggle');
+        if (!input || !btn) return;
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            const iconEl = btn.querySelector('i');
+            if (iconEl) iconEl.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    });
+
+    // ── Copy Buttons ──
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const text = btn.getAttribute('data-copy');
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                const icon = btn.querySelector('i');
+                const orig = icon ? icon.className : '';
+                if (icon) icon.className = 'bi bi-check-lg';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    if (icon) icon.className = orig;
+                    btn.classList.remove('copied');
+                }, 1800);
+            });
+        });
+    });
+
+    // ── UTM Tracking ──
+    const params = new URLSearchParams(window.location.search);
+    ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'].forEach(key => {
+        if (params.has(key)) localStorage.setItem(key, params.get(key));
+    });
+
+    // ── Form Validation & Feedback ──
+    document.querySelectorAll('form[data-validate]').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            let valid = true;
+            form.querySelectorAll('[required]').forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    field.classList.remove('is-valid');
+                    valid = false;
+                } else {
+                    field.classList.add('is-valid');
+                    field.classList.remove('is-invalid');
+                }
+            });
+            if (!valid) {
+                e.preventDefault();
+                let errBanner = form.querySelector('.form-error-banner');
+                if (!errBanner) {
+                    errBanner = document.createElement('div');
+                    errBanner.className = 'form-error-banner';
+                    errBanner.innerHTML = '<i class="bi bi-x-circle-fill"></i> Please complete all required fields correctly.';
+                    form.prepend(errBanner);
+                }
+            }
+        });
+        form.querySelectorAll('[required]').forEach(field => {
+            field.addEventListener('blur', () => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid'); field.classList.remove('is-valid');
+                } else {
+                    field.classList.add('is-valid'); field.classList.remove('is-invalid');
+                }
+            });
+            field.addEventListener('input', () => {
+                if (field.value.trim()) { field.classList.remove('is-invalid'); field.classList.add('is-valid'); }
+            });
+        });
+    });
+
+    // ── Loading animation on navigation ──
+    function showLoader() {
+        if (document.getElementById('page-loader')) return;
+        const l = document.createElement('div');
+        l.id = 'page-loader';
+        l.innerHTML = '<div class="loader-ring"></div>';
+        document.body.appendChild(l);
+        document.body.classList.remove('loaded');
+    }
+    document.querySelectorAll('form:not([data-no-loader])').forEach(f => f.addEventListener('submit', showLoader));
+    document.querySelectorAll('a[href]').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && !href.startsWith('#') && !href.startsWith('javascript') && !href.startsWith('http') && !href.startsWith('mailto') && !href.startsWith('tel') && link.target !== '_blank') {
+            link.addEventListener('click', showLoader);
+        }
+    });
+});
+</script>
+</body>
+</html>

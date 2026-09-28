@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow mt-5 border-0" style="border-radius: 15px;">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-block p-4 mb-3">
+                        <i class="bi bi-person-plus text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h3 class="fw-bold">{{ _('Create Account') }}</h3>
+                    <p class="text-muted">{{ _('Join SECURELEX today') }}</p>
+                </div>
+                
+                <form method="POST" data-validate>
+                    <div class="form-floating mb-4">
+                        <input type="text" class="form-control border-light shadow-none bg-light"
+                               id="username" name="username" placeholder="Username" required
+                               autocomplete="username">
+                        <label for="username" class="text-muted">{{ _('Username') }}</label>
+                        <div class="invalid-feedback">Username is required.</div>
+                    </div>
+
+                    <div class="form-floating mb-4">
+                        <div class="password-wrapper">
+                            <input type="password" class="form-control border-light shadow-none bg-light"
+                                   id="password" name="password" placeholder="Password" required
+                                   autocomplete="new-password" style="height:58px;">
+                            <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Password is required.</div>
+                    </div>
+
+                    <div class="form-floating mb-5">
+                        <select class="form-select border-light shadow-none bg-light" id="role" name="role" required>
+                            <option value="viewer">{{ _('Viewer (Can view documents)') }}</option>
+                            <option value="admin">{{ _('Admin (Can upload and delete)') }}</option>
+                        </select>
+                        <label for="role" class="text-muted">{{ _('Select Role') }}</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow">
+                        <i class="bi bi-person-plus-fill"></i> {{ _('Register') }}
+                    </button>
+                </form>
+
+                <div class="mt-4 text-center">
+                    <p class="text-muted">{{ _('Already have an account?') }}
+                        <a href="{{ url_for('login') }}" class="text-primary text-decoration-none fw-bold">{{ _('Login here') }}</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Recycle Bin - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="View and restore soft-deleted legal documents in the SECURELEX Recycle Bin.">{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+    <h3 class="fw-bold text-dark mb-0"><i class="bi bi-trash3-fill text-danger me-2"></i> Recycle Bin</h3>
+</div>
+
+<div class="card shadow border-0" style="border-radius: 15px;">
+    <div class="card-header bg-dark text-white pt-4 pb-3" style="border-radius: 15px 15px 0 0;">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-counterclockwise me-2 text-warning"></i> Deleted Documents (Soft Delete)</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Document Name</th>
+                        <th scope="col">Tags</th>
+                        <th scope="col">Deleted At</th>
+                        <th scope="col">Uploader</th>
+                        <th scope="col" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td>
+                            <strong class="text-dark">{{ doc.original_filename }}</strong>
+                            <div class="small text-muted">v{{ doc.version }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border me-1">{{ doc.case_tag or 'No Case' }}</span>
+                            <span class="badge bg-light text-dark border">{{ doc.category_tag or 'No Category' }}</span>
+                        </td>
+                        <td class="text-nowrap small text-muted">
+                            <i class="bi bi-clock me-1"></i> {{ doc.deleted_at|timeago if doc.deleted_at else 'Recently' }}
+                        </td>
+                        <td><span class="badge bg-secondary">{{ doc.uploader.username }}</span></td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <form action="{{ url_for('restore', doc_id=doc.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm" title="Restore document">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restore
+                                    </button>
+                                </form>
+                                {% if current_user.role == 'admin' %}
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#permDeleteModal{{ doc.id }}">
+                                    <i class="bi bi-x-circle me-1"></i> Delete Forever
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-trash3 text-secondary fs-2 d-block mb-2"></i>
+                            The Recycle Bin is empty. No deleted documents found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Permanent Delete Modals -->
+{% for doc in documents %}
+{% if current_user.role == 'admin' %}
+<div class="modal fade" id="permDeleteModal{{ doc.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white border-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i> Permanent Deletion Warning</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body py-4">
+        This action <strong>cannot be undone</strong>. The document file <strong>{{ doc.original_filename }}</strong> will be permanently wiped from the server storage.
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+        <form action="{{ url_for('perm_delete', doc_id=doc.id) }}" method="POST" class="d-inline">
+            <button type="submit" class="btn btn-danger rounded-pill">Permanently Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

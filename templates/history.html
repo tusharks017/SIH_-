@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Document History - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="View version history for document: {{ doc.original_filename }}.">{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left me-1"></i> Back to Documents</a>
+</div>
+
+<div class="card shadow border-0" style="border-radius: 15px;">
+    <div class="card-header bg-primary text-white pt-4 pb-3" style="border-radius: 15px 15px 0 0;">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i> Version History for: <span class="text-warning">{{ doc.original_filename }}</span></h4>
+    </div>
+    <div class="card-body p-4">
+        <ul class="list-group list-group-flush">
+            <!-- Current version -->
+            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center bg-light p-3 rounded-3 mb-2">
+                <div>
+                    <h5 class="mb-1 fw-bold text-primary">Version {{ doc.version }} <span class="badge bg-success ms-2">Current Primary</span></h5>
+                    <small class="text-muted"><i class="bi bi-clock me-1"></i> Uploaded {{ doc.upload_date|timeago }} by <strong>{{ doc.uploader.username }}</strong></small>
+                </div>
+                <div class="mt-2 mt-sm-0">
+                    <a href="{{ url_for('download', doc_id=doc.id) }}" class="btn btn-sm btn-primary rounded-pill shadow-sm"><i class="bi bi-download me-1"></i> Download</a>
+                </div>
+            </li>
+            
+            <!-- Older versions -->
+            {% for v in versions %}
+            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center p-3 mb-1">
+                <div>
+                    <h6 class="mb-1 fw-semibold">Version {{ v.version }}</h6>
+                    <small class="text-muted"><i class="bi bi-clock me-1"></i> Uploaded {{ v.upload_date|timeago }} by {{ v.uploader.username }}</small>
+                </div>
+                <div class="mt-2 mt-sm-0">
+                    <a href="{{ url_for('download', doc_id=v.id) }}" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-download me-1"></i> Download</a>
+                </div>
+            </li>
+            {% else %}
+            <li class="list-group-item text-center text-muted py-4">No older versions found for this document.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

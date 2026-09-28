@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Two-Factor Authentication - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="Enter your 6-digit TOTP verification code to complete login to SECURELEX.">{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-5">
+        <div class="card shadow mt-4 mt-md-5 border-0" style="border-radius: 15px;">
+            <div class="card-body p-4 p-md-5 text-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-block p-4 mb-3">
+                    <i class="bi bi-shield-check text-primary" style="font-size: 3rem;"></i>
+                </div>
+                <h3 class="fw-bold">Two-Factor Authentication</h3>
+                <p class="text-muted mb-4">Enter the 6-digit code from your authenticator app (Google Authenticator / Authy).</p>
+
+                <form method="POST" action="{{ url_for('verify_2fa_login') }}" data-validate>
+                    <div class="form-floating mb-4">
+                        <input type="text" class="form-control text-center fs-3 font-monospace tracking-widest border-light shadow-none bg-light"
+                               id="otp_code" name="otp_code" placeholder="123456" maxlength="6" pattern="\d{6}" required autofocus autocomplete="one-time-code">
+                        <label for="otp_code" class="text-muted w-100">6-Digit Verification Code</label>
+                        <div class="invalid-feedback">Enter a valid 6-digit code.</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow mb-3">
+                        <i class="bi bi-unlock-fill me-2"></i> Verify & Login
+                    </button>
+                    <div>
+                        <a href="{{ url_for('login') }}" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left me-1"></i> Back to Login</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ _('Dashboard') }} - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="Access and manage legal and investigative documents on SECURELEX securely.">{% endblock %}
+
+{% block content %}
+
+{% if stats %}
+<div class="row mb-4 g-3">
+    <div class="col-12 col-sm-6 col-md-3">
+        <div class="card text-white bg-info shadow-sm card-hover border-0">
+            <div class="card-body p-3">
+                <h6 class="card-title text-uppercase mb-1 small fw-bold"><i class="bi bi-files me-1"></i> {{ _('Total Documents') }}</h6>
+                <p class="card-text fs-2 fw-bold mb-0">{{ stats.total_docs }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+        <div class="card text-white bg-primary shadow-sm card-hover border-0">
+            <div class="card-body p-3">
+                <h6 class="card-title text-uppercase mb-1 small fw-bold"><i class="bi bi-shield-lock me-1"></i> {{ _('Admin-Only') }}</h6>
+                <p class="card-text fs-2 fw-bold mb-0">{{ stats.admin_only_docs }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+        <div class="card text-white bg-success shadow-sm card-hover border-0">
+            <div class="card-body p-3">
+                <h6 class="card-title text-uppercase mb-1 small fw-bold"><i class="bi bi-eye me-1"></i> {{ _('Viewer Accessible') }}</h6>
+                <p class="card-text fs-2 fw-bold mb-0">{{ stats.viewer_docs }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+        <a href="{{ url_for('trash') }}" class="text-decoration-none">
+            <div class="card text-white bg-danger shadow-sm card-hover border-0">
+                <div class="card-body p-3">
+                    <h6 class="card-title text-uppercase mb-1 small fw-bold"><i class="bi bi-trash3 me-1"></i> {{ _('Recycle Bin') }}</h6>
+                    <p class="card-text fs-2 fw-bold mb-0">{{ stats.trash_docs }}</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h2 class="text-primary fw-bold mb-0"><i class="bi bi-folder2-open text-secondary me-2"></i> {{ _('Documents') }}</h2>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary rounded-pill shadow-sm">
+        <i class="bi bi-cloud-arrow-up-fill me-1"></i> {{ _('Upload Document') }}
+    </a>
+</div>
+
+<div class="card mb-4 shadow-sm border-0 bg-white" style="border-radius: 12px;">
+    <div class="card-body p-3 p-md-4">
+        <form method="GET" action="{{ url_for('index') }}" class="row gx-3 gy-2 align-items-center" data-no-loader>
+            <div class="col-12 col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-search text-primary"></i></span>
+                    <input type="text" name="q" class="form-control border-light shadow-none bg-light"
+                           placeholder="{{ _('Search by case tag (e.g. SEC-2026-88) or category...') }}" value="{{ query }}">
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+                <select name="sort" class="form-select border-light shadow-none bg-light" onchange="this.form.submit()" aria-label="Sort documents">
+                    <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>{{ _('Sort by: Newest First') }}</option>
+                    <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>{{ _('Sort by: Oldest First') }}</option>
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>{{ _('Sort by: Name') }}</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100 shadow-sm rounded-pill"><i class="bi bi-funnel me-1"></i> {{ _('Search') }}</button>
+                {% if query or sort_by != 'newest' %}
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary w-100 rounded-pill">{{ _('Clear') }}</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    {% for doc in documents %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm card-hover border-0" style="border-radius: 12px;">
+            <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    {% if doc.original_filename.endswith('.pdf') %}
+                        <div class="p-3 bg-danger bg-opacity-10 rounded-circle text-danger">
+                            <i class="bi bi-file-earmark-pdf fs-3"></i>
+                        </div>
+                    {% elif doc.original_filename.endswith('.png') or doc.original_filename.endswith('.jpg') %}
+                        <div class="p-3 bg-info bg-opacity-10 rounded-circle text-info">
+                            <i class="bi bi-file-earmark-image fs-3"></i>
+                        </div>
+                    {% else %}
+                        <div class="p-3 bg-secondary bg-opacity-10 rounded-circle text-secondary">
+                            <i class="bi bi-file-earmark-text fs-3"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex flex-column align-items-end gap-1">
+                        {% if doc.is_signed %}
+                        <span class="badge rounded-pill bg-warning text-dark p-2 px-3 shadow-sm border border-warning" title="Signed by {{ doc.signer.username if doc.signer else 'Officer' }} on {{ doc.signed_at.strftime('%Y-%m-%d %H:%M') if doc.signed_at else '' }}">
+                            <i class="bi bi-patch-check-fill text-dark me-1"></i> Digitally Signed
+                        </span>
+                        {% endif %}
+                        <span class="badge rounded-pill {% if doc.access_level == 'admin-only' %}bg-primary{% else %}bg-success{% endif %} p-2 px-3 shadow-sm">
+                            <i class="bi {% if doc.access_level == 'admin-only' %}bi-shield-lock{% else %}bi-globe{% endif %} me-1"></i> {{ _(doc.access_level.title().replace('-', ' ')) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h5 class="card-title text-truncate fw-bold mt-2 mb-0" style="max-width: calc(100% - 30px);" title="{{ doc.original_filename }}">{{ doc.original_filename }}</h5>
+                    <button class="copy-btn btn btn-sm btn-link text-muted p-0 ms-2 mt-2"
+                            data-copy="{{ request.host_url }}download/{{ doc.id }}"
+                            title="Copy download link" aria-label="Copy download link">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+                <p class="text-muted small mt-1 mb-3">
+                    <i class="bi bi-clock"></i> <strong>Last Updated:</strong> {{ doc.upload_date|timeago }}
+                    &nbsp;·&nbsp; <span class="badge bg-secondary">v{{ doc.version }}</span>
+                </p>
+                <div class="mb-3 d-flex flex-wrap gap-1">
+                    <span class="badge bg-light text-dark border border-secondary border-opacity-25 rounded-pill px-3 py-2"><i class="bi bi-briefcase text-primary me-1"></i> {{ doc.case_tag or _('No Case') }}</span>
+                    <span class="badge bg-light text-dark border border-secondary border-opacity-25 rounded-pill px-3 py-2"><i class="bi bi-tag text-info me-1"></i> {{ doc.category_tag or _('No Category') }}</span>
+                </div>
+                <p class="card-text small text-muted fw-bold mb-0">
+                    <i class="bi bi-person-circle"></i> {{ _('By') }}: <span class="text-primary">{{ doc.uploader.username }}</span>
+                    {% if doc.expiry_date %}
+                    &nbsp;·&nbsp; <i class="bi bi-calendar-x text-danger"></i>
+                    <span class="text-danger small">Expires {{ doc.expiry_date.strftime('%d %b %Y') }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center pb-4 pt-0">
+                <div class="d-flex gap-1">
+                    {% if doc.original_filename.endswith('.pdf') %}
+                    <a href="{{ url_for('download', doc_id=doc.id, preview=1) }}" target="_blank" class="btn btn-sm btn-info text-white rounded-pill px-3 shadow-sm" title="Preview document" aria-label="Preview"><i class="bi bi-eye"></i></a>
+                    {% endif %}
+                    <a href="{{ url_for('download', doc_id=doc.id) }}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" title="Download document" aria-label="Download"><i class="bi bi-download me-1"></i> {{ _('Download') }}</a>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#summaryModal{{ doc.id }}" title="AI Summary"><i class="bi bi-stars"></i></button>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light rounded-circle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li><a class="dropdown-item" href="{{ url_for('upload', parent_id=doc.id) }}"><i class="bi bi-cloud-upload text-primary me-2"></i> Upload New Version</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('history', doc_id=doc.id) }}"><i class="bi bi-clock-history text-info me-2"></i> View History</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('redact', doc_id=doc.id) }}"><i class="bi bi-scissors text-warning me-2"></i> Redact PII & Terms</a></li>
+                        {% if not doc.is_signed %}
+                        <li>
+                            <form action="{{ url_for('sign', doc_id=doc.id) }}" method="POST">
+                                <button type="submit" class="dropdown-item text-success fw-bold">
+                                    <i class="bi bi-patch-check-fill text-success me-2"></i> Digitally Sign Document
+                                </button>
+                            </form>
+                        </li>
+                        {% endif %}
+                        {% if current_user.role == 'admin' %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ doc.id }}">
+                                <i class="bi bi-trash text-danger me-2"></i> Delete Document
+                            </button>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5 my-4 bg-white shadow-sm rounded-4">
+        <div class="p-4 bg-light rounded-circle d-inline-block mb-3">
+            <i class="bi bi-inbox text-primary" style="font-size: 3.5rem;"></i>
+        </div>
+        <h4 class="text-dark fw-bold">{{ _('No documents found') }}</h4>
+        <p class="text-muted">{% if query %}{{ _('Try adjusting your search criteria.') }}{% else %}{{ _("No documents uploaded yet. Get started by uploading one!") }}{% endif %}</p>
+        <a href="{{ url_for('upload') }}" class="btn btn-primary rounded-pill px-4 shadow-sm"><i class="bi bi-cloud-arrow-up me-1"></i> {{ _('Upload Now') }}</a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     PAGE-LEVEL MODALS (Placed outside cards to fix transform clipping bug)
+     ═════════════════════════════════════════════════════════════════ -->
+{% for doc in documents %}
+<!-- AI Summary Modal -->
+<div class="modal fade" id="summaryModal{{ doc.id }}" tabindex="-1" aria-labelledby="summaryModalLabel{{ doc.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white border-0" style="background-color:var(--sdms-navy)!important;border-bottom:2px solid var(--sdms-gold)!important;">
+        <h5 class="modal-title fw-bold" id="summaryModalLabel{{ doc.id }}"><i class="bi bi-stars me-2 text-warning"></i> AI Legal Executive Summary</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-file-earmark-text me-1 text-primary"></i> {{ doc.original_filename }}</h6>
+        <div class="p-3 bg-light rounded-3 border text-dark font-monospace small" style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">
+            {% if doc.ai_summary %}
+                {{ doc.ai_summary }}
+            {% else %}
+                <i class="bi bi-info-circle me-1"></i> No extracted summary available for this file yet.
+            {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if current_user.role == 'admin' %}
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal{{ doc.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ doc.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white border-0">
+        <h5 class="modal-title fw-bold" id="deleteModalLabel{{ doc.id }}"><i class="bi bi-exclamation-triangle-fill me-2"></i> {{ _('Confirm Delete') }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-4">
+        {{ _('Are you sure you want to delete the document') }} <strong>{{ doc.original_filename }}</strong>?
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+        <form action="{{ url_for('delete', doc_id=doc.id) }}" method="POST" class="d-inline">
+            <button type="submit" class="btn btn-danger rounded-pill">{{ _('Yes, Delete') }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}2FA Settings - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="Enable or manage Two-Factor Authentication (2FA) for your SECURELEX account.">{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card shadow border-0" style="border-radius: 15px;">
+            <div class="card-header bg-primary text-white pt-4 pb-3" style="border-radius: 15px 15px 0 0; background-color:var(--sdms-navy)!important; border-bottom:2px solid var(--sdms-gold)!important;">
+                <h4 class="mb-0 fw-bold"><i class="bi bi-shield-lock-fill me-2 text-warning"></i> Two-Factor Authentication (2FA)</h4>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                {% if current_user.is_2fa_enabled %}
+                <div class="text-center py-3">
+                    <div class="p-3 bg-success bg-opacity-10 rounded-circle d-inline-block text-success mb-3">
+                        <i class="bi bi-check-circle-fill" style="font-size: 3.5rem;"></i>
+                    </div>
+                    <h4 class="fw-bold text-success">2FA is Currently Enabled</h4>
+                    <p class="text-muted mb-4">Your SECURELEX account is protected with Two-Factor Authentication.</p>
+                    
+                    <form action="{{ url_for('disable_2fa') }}" method="POST">
+                        <button type="submit" class="btn btn-outline-danger rounded-pill px-4">
+                            <i class="bi bi-shield-x me-1"></i> Disable 2FA
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div>
+                    <h5 class="fw-bold mb-3"><i class="bi bi-qr-code-scan text-primary me-2"></i> Enable 2FA Protection</h5>
+                    <p class="text-muted small mb-4">Scan the code below using <strong>Google Authenticator</strong>, <strong>Authy</strong>, or <strong>Microsoft Authenticator</strong>, then enter the generated 6-digit code to activate.</p>
+
+                    <div class="bg-light p-4 rounded-3 text-center border mb-4">
+                        <div class="mb-3">
+                            <span class="badge bg-dark text-warning p-2 px-3 fs-6 font-monospace tracking-wider" style="letter-spacing: 2px;">{{ secret }}</span>
+                        </div>
+                        <div class="small text-muted mb-2">Secret Key URI:</div>
+                        <div class="font-monospace small text-break text-muted bg-white p-2 border rounded">{{ uri }}</div>
+                    </div>
+
+                    <form action="{{ url_for('enable_2fa') }}" method="POST" data-validate>
+                        <input type="hidden" name="secret" value="{{ secret }}">
+                        <div class="form-floating mb-4">
+                            <input type="text" class="form-control text-center fs-4 font-monospace border-light shadow-none bg-light"
+                                   id="otp_code" name="otp_code" placeholder="123456" maxlength="6" pattern="\d{6}" required>
+                            <label for="otp_code" class="text-muted w-100">Verification Code</label>
+                            <div class="invalid-feedback">Enter the 6-digit code to confirm.</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow">
+                            <i class="bi bi-shield-check me-2"></i> Activate 2FA
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

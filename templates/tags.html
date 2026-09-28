@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Custom Tag Manager - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="Manage custom case and category tags for document organization in SECURELEX.">{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+    <h3 class="fw-bold text-dark mb-0"><i class="bi bi-tags-fill text-primary me-2"></i> Custom Tag Manager</h3>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Create Tag Form -->
+    <div class="col-12 col-md-4">
+        <div class="card shadow border-0" style="border-radius: 15px;">
+            <div class="card-header bg-primary text-white pt-4 pb-3" style="border-radius: 15px 15px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i> Create New Tag</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" data-validate>
+                    <div class="mb-3">
+                        <label for="name" class="form-label fw-bold text-muted">Tag Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control border-light shadow-none bg-light" id="name" name="name" placeholder="e.g. SEC-2026-CONF" required>
+                        <div class="invalid-feedback">Tag name is required.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tag_type" class="form-label fw-bold text-muted">Tag Type</label>
+                        <select class="form-select border-light shadow-none bg-light" id="tag_type" name="tag_type">
+                            <option value="category">Category Tag (e.g. Contract, Brief)</option>
+                            <option value="case">Case Tag (e.g. SEC-2026-88)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="color" class="form-label fw-bold text-muted">Tag Color</label>
+                        <input type="color" class="form-control form-control-color w-100 border-0" id="color" name="color" value="#0f4c81" title="Choose tag color">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="form-label fw-bold text-muted">Description (Optional)</label>
+                        <input type="text" class="form-control border-light shadow-none bg-light" id="description" name="description" placeholder="Brief description...">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill shadow"><i class="bi bi-check-lg me-1"></i> Save Tag</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Tag List -->
+    <div class="col-12 col-md-8">
+        <div class="card shadow border-0" style="border-radius: 15px;">
+            <div class="card-header bg-dark text-white pt-4 pb-3" style="border-radius: 15px 15px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-tag-fill me-2 text-warning"></i> Existing Custom Tags</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Tag Badge</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Description</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tag in tags %}
+                            <tr>
+                                <td>
+                                    <span class="badge rounded-pill px-3 py-2 text-white" style="background-color: {{ tag.color }};">
+                                        <i class="bi {% if tag.tag_type == 'case' %}bi-briefcase{% else %}bi-tag{% endif %} me-1"></i> {{ tag.name }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">{{ tag.tag_type.title() }}</span>
+                                </td>
+                                <td class="small text-muted">{{ tag.description or 'No description provided.' }}</td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('delete_tag', tag_id=tag.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle p-2" title="Delete tag" aria-label="Delete tag">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-5">
+                                    <i class="bi bi-tags text-secondary fs-2 d-block mb-2"></i>
+                                    No custom tags defined yet. Create your first tag using the form on the left.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

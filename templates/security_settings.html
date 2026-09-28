@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Security Settings & IP Whitelisting - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="Manage enterprise IP Whitelisting, Geo-Fencing, and security controls for SECURELEX.">{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+    <h3 class="fw-bold text-dark mb-0"><i class="bi bi-shield-lock-fill text-primary me-2"></i> Security & IP Whitelisting</h3>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-7">
+        <div class="card shadow border-0" style="border-radius: 15px;">
+            <div class="card-header bg-dark text-white pt-4 pb-3" style="border-radius: 15px 15px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-globe-americas text-warning me-2"></i> IP Access Control & Geo-Fencing</h5>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small">Your Current IP Address:</span>
+                            <div class="fw-bold font-monospace text-primary fs-5">{{ client_ip }}</div>
+                        </div>
+                        <span class="badge bg-success p-2 px-3"><i class="bi bi-check-circle-fill me-1"></i> Connected</span>
+                    </div>
+                </div>
+
+                <form method="POST" data-validate>
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" name="ip_whitelist_enabled" id="ip_whitelist_enabled" value="1" {% if setting.ip_whitelist_enabled %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="ip_whitelist_enabled">
+                            Enable IP Whitelisting Enforcement
+                        </label>
+                        <div class="form-text small">When enabled, only connections originating from the specified IP addresses below will be permitted to access SECURELEX.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="allowed_ips" class="form-label fw-bold text-muted"><i class="bi bi-list-check me-1 text-primary"></i> Allowed IP Addresses / CIDRs</label>
+                        <textarea class="form-control font-monospace border-light shadow-none bg-light" id="allowed_ips" name="allowed_ips" rows="4" placeholder="127.0.0.1, ::1, 192.168.1.100">{{ setting.allowed_ips }}</textarea>
+                        <div class="form-text small">Separate multiple IPs or wildcard subnets with commas (e.g. <code>127.0.0.1, ::1, 192.168.1.*</code>). Make sure your current IP <code>{{ client_ip }}</code> is included to avoid locking yourself out!</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow">
+                        <i class="bi bi-save me-2"></i> Save Security Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

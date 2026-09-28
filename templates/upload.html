@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ _('Upload Document') }} - SECURELEX{% endblock %}
+{% block meta_description %}<meta name="description" content="Upload a new legal or investigative document securely with tags and access level controls.">{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card shadow mt-3 mt-md-5 border-0" style="border-radius: 15px;">
+            <div class="card-header bg-primary text-white pt-4 pb-4 border-0" style="border-radius: 15px 15px 0 0;">
+                <h4 class="mb-0 fw-bold text-center">
+                    <i class="bi bi-cloud-arrow-up me-2"></i> 
+                    {% if parent_doc %}
+                        Upload New Version (v{{ parent_doc.version + 1 }})
+                    {% else %}
+                        {{ _('Upload Document') }}
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                {% if parent_doc %}
+                <div class="alert alert-info mb-4 rounded-3">
+                    <i class="bi bi-info-circle-fill me-2"></i> You are uploading a new version for <strong>{{ parent_doc.original_filename }}</strong>. Tags have been pre-filled from the previous version.
+                </div>
+                {% endif %}
+
+                <form method="POST" enctype="multipart/form-data" data-validate>
+                    <div class="mb-4">
+                        <label for="file" class="form-label fw-bold text-muted">{{ _('Select File') }} <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control form-control-lg border-light shadow-none bg-light" id="file" name="file" required>
+                        <div class="invalid-feedback">Please select a file to upload.</div>
+                        <div class="form-text text-primary small mt-2">
+                            <i class="bi bi-stars text-warning me-1"></i> <strong>AI Intelligence:</strong> SECURELEX AI will automatically perform OCR text extraction, legal summarization, and auto-tagging upon upload!
+                        </div>
+                    </div>
+                    
+                    <div class="form-floating mb-4">
+                        <input type="text" class="form-control border-light shadow-none bg-light" id="case_tag" name="case_tag" placeholder="SEC-2026-8891" value="{{ parent_doc.case_tag if parent_doc else '' }}">
+                        <label for="case_tag" class="text-muted"><i class="bi bi-briefcase me-1"></i> {{ _('Case Tag') }} (e.g. SEC-2026-8891)</label>
+                    </div>
+                    
+                    <div class="form-floating mb-4">
+                        <input type="text" class="form-control border-light shadow-none bg-light" id="category_tag" name="category_tag" placeholder="Legal Brief" value="{{ parent_doc.category_tag if parent_doc else '' }}">
+                        <label for="category_tag" class="text-muted"><i class="bi bi-tag me-1"></i> {{ _('Category Tag') }} (e.g. Legal Brief, Evidence)</label>
+                    </div>
+                    
+                    <div class="form-floating mb-4">
+                        <input type="date" class="form-control border-light shadow-none bg-light" id="expiry_date" name="expiry_date">
+                        <label for="expiry_date" class="text-muted"><i class="bi bi-calendar-x me-1"></i> Expiry Date (Optional)</label>
+                    </div>
+                    
+                    <div class="form-floating mb-5">
+                        <select class="form-select border-light shadow-none bg-light" id="access_level" name="access_level" required>
+                            <option value="viewer">{{ _('Viewer (All Users)') }}</option>
+                            <option value="admin-only">{{ _('Admin Only') }}</option>
+                        </select>
+                        <label for="access_level" class="text-muted"><i class="bi bi-shield-lock me-1"></i> {{ _('Access Level') }}</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow"><i class="bi bi-upload me-2"></i> {{ _('Upload') }}</button>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('index') }}" class="text-muted text-decoration-none"><i class="bi bi-x-circle me-1"></i> {{ _('Cancel') }}</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
