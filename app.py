@@ -74,12 +74,56 @@ login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
 
+def run_db_migrations():
+    try:
+        with app.app_context():
+            db.create_all()
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                import sqlite3
+                db_file = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+                if os.path.exists(db_file):
+                    conn = sqlite3.connect(db_file)
+                    cursor = conn.cursor()
+                    
+                    # Check User table
+                    cursor.execute("PRAGMA table_info(user)")
+                    user_cols = [info[1] for info in cursor.fetchall()]
+                    if user_cols:
+                        if 'totp_secret' not in user_cols:
+                            cursor.execute("ALTER TABLE user ADD COLUMN totp_secret VARCHAR(100);")
+                        if 'is_2fa_enabled' not in user_cols:
+                            cursor.execute("ALTER TABLE user ADD COLUMN is_2fa_enabled BOOLEAN DEFAULT 0;")
+                            
+                    # Check Document table
+                    cursor.execute("PRAGMA table_info(document)")
+                    doc_cols = [info[1] for info in cursor.fetchall()]
+                    if doc_cols:
+                        if 'is_signed' not in doc_cols:
+                            cursor.execute("ALTER TABLE document ADD COLUMN is_signed BOOLEAN DEFAULT 0;")
+                        if 'signed_by_id' not in doc_cols:
+                            cursor.execute("ALTER TABLE document ADD COLUMN signed_by_id INTEGER REFERENCES user(id);")
+                        if 'signed_at' not in doc_cols:
+                            cursor.execute("ALTER TABLE document ADD COLUMN signed_at DATETIME;")
+                        if 'signature_hash' not in doc_cols:
+                            cursor.execute("ALTER TABLE document ADD COLUMN signature_hash VARCHAR(100);")
+                        if 'is_deleted' not in doc_cols:
+                            cursor.execute("ALTER TABLE document ADD COLUMN is_deleted BOOLEAN DEFAULT 0;")
+                        if 'deleted_at' not in doc_cols:
+                            cursor.execute("ALTER TABLE document ADD COLUMN deleted_at DATETIME;")
+
+                    conn.commit()
+                    conn.close()
+    except Exception as e:
+        print("Schema migration note:", e)
+
 @app.before_request
 def check_ip_whitelist():
     if request.path.startswith('/static') or request.path == '/logout':
         return
     try:
-        db.create_all()
+        if not getattr(app, '_db_migrated', False):
+            run_db_migrations()
+            app._db_migrated = True
         setting = SecuritySetting.query.first()
         if setting and setting.ip_whitelist_enabled:
             client_ip = request.remote_addr or '127.0.0.1'
