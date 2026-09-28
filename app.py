@@ -32,18 +32,26 @@ if db_uri and db_uri.startswith("postgres://"):
 
 if not db_uri:
     if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or os.environ.get('VERCEL_ENV'):
+        tmp_db = '/tmp/sdms.db'
         try:
             os.makedirs('/tmp', exist_ok=True)
+            os.chmod('/tmp', 0o777)
         except Exception:
             pass
-        tmp_db = '/tmp/sdms.db'
+            
         orig_db = os.path.join(app.root_path, 'instance', 'sdms.db')
         if not os.path.exists(tmp_db) and os.path.exists(orig_db):
             import shutil
             try:
                 shutil.copyfile(orig_db, tmp_db)
+                os.chmod(tmp_db, 0o666)
             except Exception as e:
                 print("Error copying seed db to /tmp:", e)
+        elif os.path.exists(tmp_db):
+            try:
+                os.chmod(tmp_db, 0o666)
+            except Exception:
+                pass
         db_uri = f'sqlite:///{tmp_db}'
     else:
         db_uri = 'sqlite:///' + os.path.join(app.root_path, 'instance', 'sdms.db')
@@ -194,7 +202,7 @@ def register():
                 flash('Username already exists', 'danger')
                 return redirect(url_for('register'))
                 
-            new_user = User(username=username, password=generate_password_hash(password), role=role)
+            new_user = User(username=username, password=generate_password_hash(password, method='pbkdf2:sha256'), role=role)
             db.session.add(new_user)
             db.session.commit()
             

@@ -13,13 +13,14 @@ from reportlab.lib.units import inch
 # ═════════════════════════════════════════════════════════════════
 # 1. AES-256 ENCRYPTION AT REST
 # ═════════════════════════════════════════════════════════════════
-KEY_FILE = os.path.join(os.path.dirname(__file__), 'secret.key')
+KEY_FILE = os.path.join('/tmp', 'secret.key') if (os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or os.environ.get('VERCEL_ENV')) else os.path.join(os.path.dirname(__file__), 'secret.key')
 env_key = os.environ.get('ENCRYPTION_KEY')
 if env_key:
     raw_key = base64.b64decode(env_key.encode('utf-8'))
 elif not os.path.exists(KEY_FILE):
     raw_key = os.urandom(32)
     try:
+        os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
         with open(KEY_FILE, 'wb') as f:
             f.write(base64.b64encode(raw_key))
     except Exception:
