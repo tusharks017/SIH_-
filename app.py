@@ -74,56 +74,17 @@ login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
 
-def run_db_migrations():
+with app.app_context():
     try:
-        with app.app_context():
-            db.create_all()
-            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
-                import sqlite3
-                db_file = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-                if os.path.exists(db_file):
-                    conn = sqlite3.connect(db_file)
-                    cursor = conn.cursor()
-                    
-                    # Check User table
-                    cursor.execute("PRAGMA table_info(user)")
-                    user_cols = [info[1] for info in cursor.fetchall()]
-                    if user_cols:
-                        if 'totp_secret' not in user_cols:
-                            cursor.execute("ALTER TABLE user ADD COLUMN totp_secret VARCHAR(100);")
-                        if 'is_2fa_enabled' not in user_cols:
-                            cursor.execute("ALTER TABLE user ADD COLUMN is_2fa_enabled BOOLEAN DEFAULT 0;")
-                            
-                    # Check Document table
-                    cursor.execute("PRAGMA table_info(document)")
-                    doc_cols = [info[1] for info in cursor.fetchall()]
-                    if doc_cols:
-                        if 'is_signed' not in doc_cols:
-                            cursor.execute("ALTER TABLE document ADD COLUMN is_signed BOOLEAN DEFAULT 0;")
-                        if 'signed_by_id' not in doc_cols:
-                            cursor.execute("ALTER TABLE document ADD COLUMN signed_by_id INTEGER REFERENCES user(id);")
-                        if 'signed_at' not in doc_cols:
-                            cursor.execute("ALTER TABLE document ADD COLUMN signed_at DATETIME;")
-                        if 'signature_hash' not in doc_cols:
-                            cursor.execute("ALTER TABLE document ADD COLUMN signature_hash VARCHAR(100);")
-                        if 'is_deleted' not in doc_cols:
-                            cursor.execute("ALTER TABLE document ADD COLUMN is_deleted BOOLEAN DEFAULT 0;")
-                        if 'deleted_at' not in doc_cols:
-                            cursor.execute("ALTER TABLE document ADD COLUMN deleted_at DATETIME;")
-
-                    conn.commit()
-                    conn.close()
+        db.create_all()
     except Exception as e:
-        print("Schema migration note:", e)
+        print("Database init note:", e)
 
 @app.before_request
 def check_ip_whitelist():
     if request.path.startswith('/static') or request.path == '/logout':
         return
     try:
-        if not getattr(app, '_db_migrated', False):
-            run_db_migrations()
-            app._db_migrated = True
         setting = SecuritySetting.query.first()
         if setting and setting.ip_whitelist_enabled:
             client_ip = request.remote_addr or '127.0.0.1'
@@ -185,40 +146,43 @@ def index():
     query = request.args.get('q', '')
     sort_by = request.args.get('sort', 'newest')
     
-    # Base query: only latest versions (parent_id is null)
-    # and not expired (expiry_date is null or > now)
-    now = datetime.utcnow()
-    docs_query = Document.query.filter(Document.parent_id == None, Document.is_deleted == False)
-    docs_query = docs_query.filter((Document.expiry_date == None) | (Document.expiry_date > now))
-    
-    if current_user.role != 'admin':
-        docs_query = docs_query.filter_by(access_level='viewer')
-    
-    if query:
-        docs_query = docs_query.filter(
-            (Document.case_tag.contains(query)) |
-            (Document.category_tag.contains(query)) |
-            (Document.original_filename.contains(query)) |
-            (Document.extracted_text.contains(query))
-        )
+    try:
+        now = datetime.utcnow()
+        docs_query = Document.query.filter(Document.parent_id == None, Document.is_deleted == False)
+        docs_query = docs_query.filter((Document.expiry_date == None) | (Document.expiry_date > now))
         
-    if sort_by == 'oldest':
-        docs_query = docs_query.order_by(Document.upload_date.asc())
-    elif sort_by == 'name':
-        docs_query = docs_query.order_by(Document.original_filename.asc())
-    else: # newest
-        docs_query = docs_query.order_by(Document.upload_date.desc())
+        if current_user.role != 'admin':
+            docs_query = docs_query.filter_by(access_level='viewer')
         
-    documents = docs_query.all()
-    
-    admin_stats = {}
-    if current_user.role == 'admin':
-        admin_stats['total_docs'] = Document.query.filter_by(is_deleted=False).count()
-        admin_stats['admin_only_docs'] = Document.query.filter_by(access_level='admin-only', is_deleted=False).count()
-        admin_stats['viewer_docs'] = Document.query.filter_by(access_level='viewer', is_deleted=False).count()
-        admin_stats['trash_docs'] = Document.query.filter_by(is_deleted=True).count()
+        if query:
+            docs_query = docs_query.filter(
+                (Document.case_tag.contains(query)) |
+                (Document.category_tag.contains(query)) |
+                (Document.original_filename.contains(query)) |
+                (Document.extracted_text.contains(query))
+            )
+            
+        if sort_by == 'oldest':
+            docs_query = docs_query.order_by(Document.upload_date.asc())
+        elif sort_by == 'name':
+            docs_query = docs_query.order_by(Document.original_filename.asc())
+        else: # newest
+            docs_query = docs_query.order_by(Document.upload_date.desc())
+            
+        documents = docs_query.all()
         
-    return render_template('index.html', documents=documents, query=query, sort_by=sort_by, stats=admin_stats)
+        admin_stats = {}
+        if current_user.role == 'admin':
+            admin_stats['total_docs'] = Document.query.filter_by(is_deleted=False).count()
+            admin_stats['admin_only_docs'] = Document.query.filter_by(access_level='admin-only', is_deleted=False).count()
+            admin_stats['viewer_docs'] = Document.query.filter_by(access_level='viewer', is_deleted=False).count()
+            admin_stats['trash_docs'] = Document.query.filter_by(is_deleted=True).count()
+            
+        return render_template('index.html', documents=documents, query=query, sort_by=sort_by, stats=admin_stats)
+    except Exception as e:
+        db.session.rollback()
+        print("Dashboard index error:", e)
+        return render_template('index.html', documents=[], query='', sort_by='newest', stats={})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
