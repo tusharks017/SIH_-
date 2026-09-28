@@ -29,7 +29,23 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'securelex-super-secret-
 db_uri = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI')
 if db_uri and db_uri.startswith("postgres://"):
     db_uri = db_uri.replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = db_uri or 'sqlite:///' + os.path.join(app.root_path, 'instance', 'sdms.db')
+
+if not db_uri:
+    if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+        tmp_db = '/tmp/sdms.db'
+        orig_db = os.path.join(app.root_path, 'instance', 'sdms.db')
+        if not os.path.exists(tmp_db) and os.path.exists(orig_db):
+            import shutil
+            try:
+                os.makedirs('/tmp', exist_ok=True)
+                shutil.copyfile(orig_db, tmp_db)
+            except Exception as e:
+                print("Error copying seed db to /tmp:", e)
+        db_uri = f'sqlite:///{tmp_db}'
+    else:
+        db_uri = 'sqlite:///' + os.path.join(app.root_path, 'instance', 'sdms.db')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 
 # Upload folder (Use /tmp/uploads on Vercel serverless or local folder)
 upload_dir = os.environ.get('UPLOAD_FOLDER') or (
@@ -165,18 +181,27 @@ def register():
         password = request.form.get('password')
         role = request.form.get('role', 'viewer')
         
-        user = User.query.filter_by(username=username).first()
-        if user:
-            flash('Username already exists', 'danger')
+        if not username or not password:
+            flash('Username and password are required', 'danger')
             return redirect(url_for('register'))
             
-        new_user = User(username=username, password=generate_password_hash(password, method='scrypt'), role=role)
-        db.session.add(new_user)
-        db.session.commit()
-        
-        flash('Registration successful! Please login.', 'success')
-        return redirect(url_for('login'))
-        
+        try:
+            user = User.query.filter_by(username=username).first()
+            if user:
+                flash('Username already exists', 'danger')
+                return redirect(url_for('register'))
+                
+            new_user = User(username=username, password=generate_password_hash(password), role=role)
+            db.session.add(new_user)
+            db.session.commit()
+            
+            flash('Registration successful! Please login.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Registration error: {str(e)}', 'danger')
+            return redirect(url_for('register'))
+            
     return render_template('register.html')
 
 @app.route('/logout')
